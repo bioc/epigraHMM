@@ -1,7 +1,7 @@
 Package: epigraHMM
 Title: Epigenomic R-based analysis with hidden Markov models
-Version: 1.17.0
-Date: 2019-12-10
+Version: 1.17.1
+Date: 2025-07-22
 Authors@R: c(person("Pedro", "Baldoni", email = "pedrobaldoni@gmail.com", role = c("aut","cre")))
 biocViews: ChIPSeq, ATACSeq, DNaseSeq, HiddenMarkovModel, Epigenetics
 Description: epigraHMM provides a set of tools for the analysis of epigenomic data 
@@ -17,7 +17,7 @@ Imports:
     data.table,
     SummarizedExperiment,
     methods,
-    GenomeInfoDb,
+    Seqinfo,
     GenomicRanges,
     rtracklayer,
     IRanges,
@@ -38,7 +38,7 @@ Imports:
     pheatmap,
     grDevices
 LinkingTo: Rcpp, RcppArmadillo, Rhdf5lib
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.2
 Encoding: UTF-8
 SystemRequirements: GNU make
 Suggests: 

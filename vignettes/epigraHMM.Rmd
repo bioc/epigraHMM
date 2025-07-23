@@ -127,7 +127,7 @@ The input argument `bamFiles` specifies the path to the experimental files in BA
 
 The input `colData` must contain variables named as **condition** and **replicate**. The variable condition refers to the experimental condition identifier (e.g. cell line name). The variable replicate refers to the replicate identification number (unique for each condition). Additional columns included in the `colData` input will be passed to the resulting *epigraHMMDataSet* object and can be accessed via `colData` function.
 
-The input `genome` can be either a single string with the name of the reference genome (e.g. 'hg19') or a *GRanges* object with the chromosome lengths of the reference genome. By default, the function `epigraHMMDataSetFromBam` calls [GenomeInfoDb::Seqinfo](https://bioconductor.org/packages/release/bioc/html/GenomeInfoDb.html) to fetch the chromosome lengths of the specified genome. See `?GenomeInfoDb::fetchExtendedChromInfoFromUCSC` for the list of UCSC genomes that are currently supported. The input `windowSize` must be an integer value specifying the size of genomic windows where read counts will be computed.
+The input `genome` can be either a single string with the name of the reference genome (e.g. 'hg19') or a *GRanges* object with the chromosome lengths of the reference genome. By default, the function `epigraHMMDataSetFromBam` calls [Seqinfo::Seqinfo](https://bioconductor.org/packages/release/bioc/html/Seqinfo.html) to fetch the chromosome lengths of the specified genome. See `?Seqinfo::fetchExtendedChromInfoFromUCSC` for the list of UCSC genomes that are currently supported. The input `windowSize` must be an integer value specifying the size of genomic windows where read counts will be computed.
 
 #### About gap and blacklisted regions
 
@@ -342,7 +342,7 @@ First, we will fetch the UCSC gene bodies from the rn4 genome. They will be then
 ```{r viz_anno}
 library(GenomicRanges)
 library(rtracklayer)
-library(GenomeInfoDb)
+library(Seqinfo)
 
 session <- browserSession()
 genome(session) <- 'rn4'

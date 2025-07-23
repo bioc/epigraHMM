@@ -36,11 +36,11 @@ getGenome <- function(genome,windowSize,bamFiles){
             })
             chrlist <- Reduce(intersect,chrlist)
             # Tiling up the specified genome
-            gr.seqinfo <- GenomeInfoDb::Seqinfo(genome = genome)
+            gr.seqinfo <- Seqinfo::Seqinfo(genome = genome)
             gr.genome <- GenomicRanges::tileGenome(cut.last.tile.in.chrom = TRUE,
                                                    seqlengths = gr.seqinfo,
                                                    tilewidth = windowSize)
-            myDecode <- S4Vectors::decode(GenomeInfoDb::seqnames(gr.genome))
+            myDecode <- S4Vectors::decode(Seqinfo::seqnames(gr.genome))
             gr.genome <- gr.genome[myDecode %in% chrlist]
             return(list('genome' = gr.genome,'seqinfo' = gr.seqinfo))
         } else{
@@ -53,7 +53,7 @@ getGenome <- function(genome,windowSize,bamFiles){
 ### Get blacklist
 ################################################################################
 
-#' @importFrom GenomeInfoDb genome
+#' @importFrom Seqinfo genome
 getList <- function(blackList,genome){
     if (!methods::is(blackList)[1] == "GRanges") {
         greyItems <- utils::data(package = 'GreyListChIP')$results[,'Item']
@@ -61,7 +61,7 @@ getList <- function(blackList,genome){
         if (is.character(genome)) {
             dataExists <- paste0(genome,'.blacklist') %in% greyItems
         } else{
-            genomeName <- unique(GenomeInfoDb::genome(genome))
+            genomeName <- unique(Seqinfo::genome(genome))
             if (length(genomeName) == 1) {
                 dataExists <- paste0(genomeName,'.blacklist') %in% greyItems
             } else{
@@ -77,7 +77,7 @@ getList <- function(blackList,genome){
             gr.blackList <- 
                 GenomicRanges::GRanges(seqnames = seqnames(gr.blacklist),
                                        ranges = IRanges::ranges(gr.blacklist),
-                                       seqinfo = GenomeInfoDb::Seqinfo(genome = genome))
+                                       seqinfo = Seqinfo::Seqinfo(genome = genome))
             gr.blackList <- GenomicRanges::trim(gr.blackList)
         } else {
             gr.blackList <- GenomicRanges::GRanges()
@@ -98,7 +98,7 @@ getGap <- function(gapTrack,genome,gr.seqinfo = NULL){
         if (isTRUE(gapTrack) & is.character(genome)) {
             # Gap table
             session <- rtracklayer::browserSession()
-            GenomeInfoDb::genome(session) <- genome
+            Seqinfo::genome(session) <- genome
             tb.ucsc <- rtracklayer::ucscTableQuery(session, table = "gap")
             dt.gaps <- rtracklayer::getTable(tb.ucsc)
             dt.gaps <- data.table::as.data.table(dt.gaps)

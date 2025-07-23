@@ -26,8 +26,8 @@
 #' 
 #' Additional columns included in the colData input will be passed to the resulting epigraHMMDataSet assay and can be acessed via \code{colData()} function.
 #'
-#' The \code{genome} argument will call GenomeInfoDb::Seqinfo() to fetch the chromosome lengths of the specified genome.
-#' See ?GenomeInfoDb::Seqinfo for the list of UCSC genomes that are currently supported.
+#' The \code{genome} argument will call Seqinfo::Seqinfo() to fetch the chromosome lengths of the specified genome.
+#' See ?Seqinfo::Seqinfo for the list of UCSC genomes that are currently supported.
 #'
 #' If \code{gapTrack = TRUE} and the name of a reference genome is passed as input through \code{genome} (e.g. 'hg19'),
 #' the function will discard any genomic coordinate overlapping regions specified by the respective UCSC gap table.
@@ -52,7 +52,7 @@
 #'
 #' @importFrom methods is
 #' @importFrom SummarizedExperiment SummarizedExperiment rowRanges assay colData
-#' @importFrom GenomeInfoDb Seqinfo seqnames genome
+#' @importFrom Seqinfo Seqinfo seqnames genome
 #' @importFrom GenomicRanges tile tileGenome makeGRangesFromDataFrame GRanges
 #' @importFrom rtracklayer browserSession getTable ucscTableQuery import BEDFile
 #' @importFrom IRanges overlapsAny union

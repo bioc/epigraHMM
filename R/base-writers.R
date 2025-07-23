@@ -101,7 +101,7 @@ writeWig <- function(object,chrset,dt.bigwig,control,filenames){
         close(con)
         
         tryCatch({
-            sqInfo <- GenomeInfoDb::seqinfo(SummarizedExperiment::rowRanges(object))
+            sqInfo <- Seqinfo::seqinfo(SummarizedExperiment::rowRanges(object))
             rtracklayer::wigToBigWig(x = fname,seqinfo = sqInfo)
             unlink(con)
         },error = function(x){
