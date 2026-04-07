@@ -36,11 +36,11 @@ knitr::opts_chunk$set(tidy = FALSE,
 
 If you use epigraHMM in published research for _consensus_ peak calling of epigenomic data, please cite:
 
-> Baldoni, PL, Rashid, NU, Ibrahim, JG. Improved detection of epigenomic marks with mixed‐effects hidden Markov models. Biometrics. 2019; 75: 1401–1413. https://doi.org/10.1111/biom.13083
+> Baldoni, PL, Rashid, NU, Ibrahim, JG. Improved detection of epigenomic marks with mixed‐effects hidden Markov models. Biometrics. 2019; 75(4): 1401–1413. https://doi.org/10.1111/biom.13083
 
 If epigraHMM is used in published research for _differential_ peak calling of epigenomic data, please cite:
 
-> Baldoni, PL, Rashid, NU, Ibrahim, JG. Efficient Detection and Classification of Epigenomic Changes Under Multiple Conditions. Biometrics (in press). https://doi.org/10.1111/biom.13477
+> Baldoni, PL, Rashid, NU, Ibrahim, JG. Efficient Detection and Classification of Epigenomic Changes Under Multiple Conditions. Biometrics. 2022; 78(3): 1141-1154. https://doi.org/10.1111/biom.13477
 
 ## How to get help for epigraHMM
 
@@ -48,7 +48,7 @@ Exported functions from epigraHMM are fully documented. Users looking for help f
 
 ## Quick start
 
-The code chunk below presents the main steps of the analysis of epigenomic data using epigraHMM. epigraHMM imports functions from `GenomicRanges` and `SummarizedExperiment` for its internal computations. We will use some of these imported functions in this vignette to demonstrate the utilization of epigraHMM. Therefore, we load these two packages explicitly here. In this vignette, we utilize ChIP-seq data from the Bioconductor package `chromstaRData`.
+The code chunk below presents the main steps of the analysis of epigenomic data using epigraHMM. epigraHMM imports functions from `GenomicRanges` and `SummarizedExperiment` for its internal computations. We will use some of these imported functions in this vignette to demonstrate the utilization of epigraHMM. Therefore, we load these two packages explicitly here. In this vignette, we utilize ChIP-seq data from the Bioconductor package `genomationData`.
 
 ```{r introduction_workflow}
 library(GenomicRanges)
@@ -56,35 +56,37 @@ library(epigraHMM)
 library(SummarizedExperiment)
 
 # Creating input for epigraHMM
-bamFiles <- system.file(package="chromstaRData","extdata","euratrans",
-                        c("lv-H3K27me3-BN-male-bio2-tech1.bam",
-                          "lv-H3K27me3-BN-male-bio2-tech2.bam"))
+bamFiles <- system.file(package="genomationData","extdata",
+                        c("wgEncodeBroadHistoneH1hescCtcfStdAlnRep1.chr21.bam"))
 
-colData <- data.frame(condition = c('BN','BN'),replicate = c(1,2))
+colData <- data.frame(condition = "CTCF",replicate = 1)
 
 # Creating epigraHMM object
 object <- epigraHMMDataSetFromBam(bamFiles = bamFiles,
                                   colData = colData,
-                                  genome = 'rn4',
-                                  windowSize = 1000,
+                                  genome = 'hg19',
+                                  windowSize = 250,
                                   gapTrack = TRUE)
+
+# Make control object
+control <- controlEM(fileName = 'control-workflow')
 
 # Creating normalizing offsets
 object <- normalizeCounts(object = object,
-                          control = controlEM())
+                          control = control)
 
 # Initializing epigraHMM
 object <- initializer(object = object,
-                      control = controlEM())
+                      control = control)
 
 # Running epigraHMM for consensus peak detection 
 object <- epigraHMM(object = object,
-                    control = controlEM(),
+                    control = control,
                     type = 'consensus')
 
 # Calling peaks with FDR control of 0.05
 peaks <- callPeaks(object = object,
-                   control = controlEM(),
+                   control = control,
                    method = 0.05)
 ```
 
@@ -139,17 +141,16 @@ If the optional `blackList = TRUE` (default) and the name of a reference genome 
 
 ```{r data_input_baminput}
 # Creating input for epigraHMM
-bamFiles <- system.file(package="chromstaRData","extdata","euratrans",
-                        c("lv-H3K4me3-SHR-male-bio2-tech1.bam",
-                          "lv-H3K4me3-SHR-male-bio3-tech1.bam"))
+bamFiles <- system.file(package="genomationData","extdata",
+                        "wgEncodeBroadHistoneH1hescCtcfStdAlnRep1.chr21.bam")
 
-colData <- data.frame(condition = c('SHR','SHR'),
-                      replicate = c(1,2))
+colData <- data.frame(condition = "CTCF",
+                      replicate = 1)
 
 # Creating epigraHMM object
 object_bam <- epigraHMMDataSetFromBam(bamFiles = bamFiles,
                                       colData = colData,
-                                      genome = 'rn4',
+                                      genome = 'hg19',
                                       windowSize = 250,
                                       gapTrack = TRUE)
 
@@ -162,10 +163,12 @@ The function `normalizeCounts` implements a non-linear normalization via model o
 
 The current implementation in epigraHMM uses the function `loessFit` from [limma](https://www.bioconductor.org/packages/release/bioc/html/limma.html) in a similar fashion to `csaw::normOffsets`. Users might pass further arguments to *loessFit* through the three dot ellipsis `...`. For instance, users might find useful to try different proportions of the data to be used in the local regression window (argument `span`, a positive value between 0 and 1, with larger numbers giving smoother fits). We find that `span=1` (default) in *normalizeCounts* gives the best results in both broad and short epigenomic marks [@baldoni2019efficient].
 
+In the example below, no differences are observed because we have processed only a single ChIP-seq sample so as to avoid a long rendering time of this vignette. Yet, it shows how one would perform the non-linear normalization within the epigraHMM framework.
+
 ```{r data_norm_offset}
 # Normalizing counts
 object_normExample <- object_bam
-object_normExample <- normalizeCounts(object_normExample,control = controlEM())
+object_normExample <- normalizeCounts(object_normExample,control = control)
 
 normCts <- as.matrix(assay(object_normExample)/
                        exp(assay(object_normExample,'offsets')))
@@ -189,7 +192,7 @@ Note that, in the example below, `gcapc::refineSites` will fetch data from the B
 
 ```{r gcnorm,fig.show='hide',results='hide'}
 library(gcapc)
-library(BSgenome.Rnorvegicus.UCSC.rn4)
+library(BSgenome.Hsapiens.UCSC.hg19)
 
 # Toy example of utilization of gcapc for GC-content normalization with model offsets
 # See ?gcapc::refineSites for best practices
@@ -201,7 +204,7 @@ object_gcExample <- object_bam[2e4:5e4,]
 gcnorm <- gcapc::refineSites(counts = assay(object_gcExample),
                              sites = rowRanges(object_gcExample),
                              gcrange = c(0,1),
-                             genome = 'rn4')
+                             genome = 'hg19')
 
 # gcapc::refineSites outputs counts/2^gce
 gcnorm_offsets <- log2((assay(object_gcExample) + 1) / (gcnorm + 1))
@@ -213,24 +216,22 @@ object_gcExample <- addOffsets(object = object_gcExample,
 
 We note that `addOffsets` will add offsets to any existing offset assay contained in *epigraHMMDataSet*. That is, in the example above, the resulting offsets from the output of `addOffsets(object_gcExample,offsets = gcnorm_offsets)` will be equal to `assay(object_gcExample,'offsets') + gcnorm_offsets`.
 
-Alternatively, epigraHMM may account for input control experiments when calling significant regions of enrichment of a given condition. To this end, epigraHMM directly models the effect of input control read counts in its HMM-embedded generalized linear model. Users interested in utilizing input control experiments in their analyses should pass either matrices of read counts or the paths to the control BAM files in the 'controls' entry of the input list *bamFiles* as below. To speed up the computing time, I utilize a window size of 1000 base pairs.
+Alternatively, epigraHMM may account for input control experiments when calling significant regions of enrichment of a given condition. To this end, epigraHMM directly models the effect of input control read counts in its HMM-embedded generalized linear model. Users interested in utilizing input control experiments in their analyses should pass either matrices of read counts or the paths to the control BAM files in the 'controls' entry of the input list *bamFiles* as below. The example below is not run so as to avoid long rendering time.
 
-```{r data_input_controls}
+```{r data_input_controls,eval=FALSE}
 # Creating input for epigraHMM
-bamFiles <- list('counts' = system.file(package="chromstaRData",
-                                        "extdata","euratrans",
-                                        "lv-H4K20me1-BN-male-bio1-tech1.bam"),
-                 'controls' = system.file(package="chromstaRData",
-                                          "extdata","euratrans",
-                                          "lv-input-BN-male-bio1-tech1.bam"))
+bamFiles <- list('counts' = system.file(package="genomationData",
+                                        "extdata",
+                                        "wgEncodeBroadHistoneH1hescCtcfStdAlnRep1.chr21.bam"),
+                 'controls' = "/path/to/your/inputcontrol.bam")
 
-colData <- data.frame(condition = 'BN',replicate = 1)
+colData <- data.frame(condition = 'CTCF',replicate = 1)
 
 # Creating epigraHMM object
 object_bam <- epigraHMMDataSetFromBam(bamFiles = bamFiles,
                                       colData = colData,
-                                      genome = 'rn4',
-                                      windowSize = 1000,
+                                      genome = 'hg19',
+                                      windowSize = 250,
                                       gapTrack = TRUE)
 
 object_bam
@@ -250,70 +251,73 @@ The `control` argument should be a list of parameter specifications generated fr
 
 ### Multi-sample single-condition analysis
 
-If one is interested in detecting consensus peaks across multiple samples (or simply detecting peaks from a single-sample) of the same condition, epigraHMM can be used with the option `type = 'consensus'` as below. To speed up the computing time, I utilize a window size of 1000 base pairs.
+If one is interested in detecting consensus peaks across multiple samples (or simply detecting peaks from a single-sample) of the same condition, epigraHMM can be used with the option `type = 'consensus'` as below. To speed up the computing time, I utilize a window size of 250 base pairs. In reality, one would have biological replicates in a ChIP-seq experiment.
 
 ```{r data_peak_consensus,message = FALSE}
 # Creating input for epigraHMM
-bamFiles <- system.file(package="chromstaRData","extdata","euratrans",
-                        c("lv-H3K27me3-BN-male-bio2-tech1.bam",
-                          "lv-H3K27me3-BN-male-bio2-tech2.bam"))
+bamFiles <- system.file(package="genomationData","extdata",
+                        "wgEncodeBroadHistoneH1hescCtcfStdAlnRep1.chr21.bam")
 
-colData <- data.frame(condition = c('BN','BN'),
-                      replicate = c(1,2))
+colData <- data.frame(condition = "CTCF",
+                      replicate = 1)
 
 # Creating epigraHMM object
 object_consensus <- epigraHMMDataSetFromBam(bamFiles = bamFiles,
                                             colData = colData,
-                                            genome = 'rn4',
-                                            windowSize = 1000,
-                                            gapTrack = TRUE)
+                                            genome = 'hg19',
+                                            windowSize = 250,
+                                            gapTrack = TRUE,
+                                            blackList = TRUE)
+
+# Create control object for EM algorithm
+control <- controlEM(fileName = 'control-consensus')
 
 # Normalizing counts
 object_consensus <- normalizeCounts(object_consensus,
-                                    control = controlEM())
+                                    control = control)
 
 # Initializing epigraHMM
-object_consensus <- initializer(object_consensus,controlEM())
+object_consensus <- initializer(object_consensus,control)
 
 # Differential peak calling
 object_consensus <- epigraHMM(object = object_consensus,
-                              control = controlEM(),
-                              type = 'consensus',
-                              dist = 'zinb')
+                              control = control,
+                              type = 'consensus')
 ```
 
 ### Multi-sample, multiple-condition analysis
 
-If one is interested in detecting differential peaks across multiple samples collected under different conditions, epigraHMM can be used with the option `type = 'differential'` as below. Note that it is not mandatory for experimental conditions to have more than one technical or biological replicates. In principle, epigraHMM is able to call differential peaks under single-sample multi-condition designs. However, users are strongly encouraged to utilized as many technical/biological replicates per condition as possible in their analyses. epigraHMM provides better performance regarding sensitivity and false discovery rate (FDR) control when more replicates are utilized (see Web Figures 13-15 in [@baldoni2019efficient]). To speed up the computing time, I utilize a window size of 1000 base pairs.
+If one is interested in detecting differential peaks across multiple samples collected under different conditions, epigraHMM can be used with the option `type = 'differential'` as below. Note that it is not mandatory for experimental conditions to have more than one technical or biological replicates. In principle, epigraHMM is able to call differential peaks under single-sample multi-condition designs. However, users are strongly encouraged to utilized as many technical/biological replicates per condition as possible in their analyses. epigraHMM provides better performance regarding sensitivity and false discovery rate (FDR) control when more replicates are utilized (see Web Figures 13-15 in [@baldoni2019efficient]). To speed up the computing time, I utilize a window size of 250 base pairs.
 
 ```{r data_peak_differential,message = FALSE}
 # Creating input for epigraHMM
-bamFiles <- system.file(package="chromstaRData","extdata","euratrans",
-                        c("lv-H3K27me3-BN-male-bio2-tech1.bam",
-                          "lv-H3K27me3-BN-male-bio2-tech2.bam",
-                          "lv-H3K27me3-SHR-male-bio2-tech1.bam",
-                          "lv-H3K27me3-SHR-male-bio2-tech2.bam"))
+bamFiles <- system.file(package="genomationData","extdata",
+                        c("wgEncodeBroadHistoneH1hescCtcfStdAlnRep1.chr21.bam",
+                          "wgEncodeBroadHistoneH1hescSuz12051317AlnRep1.chr21.bam"))
 
-colData <- data.frame(condition = c('BN','BN','SHR','SHR'),
-                      replicate = c(1,2,1,2))
+colData <- data.frame(condition = c("CTCF","SUZ12"),
+                      replicate = c(1,1))
 
 # Creating epigraHMM object
 object_differential <- epigraHMMDataSetFromBam(bamFiles = bamFiles,
                                                colData = colData,
-                                               genome = 'rn4',
-                                               windowSize = 1000,
-                                               gapTrack = TRUE)
+                                               genome = 'hg19',
+                                               windowSize = 250,
+                                               gapTrack = TRUE,
+                                               blackList = TRUE)
+
+# Create control object for EM algorithm
+control <- controlEM(fileName = 'control-differential',criterion = 'MACPE')
 
 # Normalizing counts
-object_differential <- normalizeCounts(object_differential,
-                                       control = controlEM())
+object_differential <- normalizeCounts(object_differential,control)
 
 # Initializing epigraHMM
-object_differential <- initializer(object_differential,controlEM())
+object_differential <- initializer(object_differential,control)
 
 # Differential peak calling
 object_differential <- epigraHMM(object = object_differential,
-                                 control = controlEM(),
+                                 control = control,
                                  type = 'differential')
 ```
 
@@ -337,7 +341,7 @@ peaks_differential
 
 Peaks can be visualized with the epigraHMM function `plotCounts`, which accepts annotation tracks to be included in the output plot. Below, we show an example on how to visualize peaks calls.
 
-First, we will fetch the UCSC gene bodies from the rn4 genome. They will be then transformed into a GRanges object to be used by epigraHMM as an annotation track.
+First, we will fetch the UCSC gene bodies from the hg19 genome. They will be then transformed into a GRanges object to be used by epigraHMM as an annotation track.
 
 ```{r viz_anno}
 library(GenomicRanges)
@@ -345,7 +349,7 @@ library(rtracklayer)
 library(Seqinfo)
 
 session <- browserSession()
-genome(session) <- 'rn4'
+genome(session) <- 'hg19'
 refSeq <- getTable(ucscTableQuery(session, table = "refGene"))
 
 annotation <- makeGRangesFromDataFrame(refSeq,
@@ -360,50 +364,41 @@ annotation <- makeGRangesFromDataFrame(refSeq,
 To visualize the consensus or differential peak calls, one needs to provide the output of `epigraHMM` (argument `object`), the genomic coordinates to be visualized (argument `ranges`), the set of peak calls (argument `peaks`, optional), and the annotation track (argument `annotation`, optional). The resulting plot will display the peak track, the annotation track, the normalized read counts, and the posterior probabilities associated with either consensus enrichment (for consensus peaks) or differential enrichment (for differential peaks). Read counts are normalized with the normalizing offsets contained in the `epigraHMM` output object.
 
 ```{r viz_consensus}
+gr_consensus <- GRanges('chr21',IRanges(41108537,41185351))
+
 plotCounts(object = object_consensus,
-           ranges = GRanges('chr12',IRanges(19500000,20000000)),
+           ranges = gr_consensus,
            peaks = peaks_consensus,
            annotation = annotation)
 ```
-Below, we have an example of differential peak calls between conditions BN and SHR for the histone modification mark H3K27me3.
+Below, we have an example of differential peak calls between CTCF and KAT3B.
 
 ```{r viz_differential}
+gr_differential <- GRanges('chr21',IRanges(41198328,41352762))
+
 plotCounts(object = object_differential,
-           ranges = GRanges('chr12',IRanges(19500000,20100000)),
+           ranges = gr_differential,
            peaks = peaks_differential,
            annotation = annotation)
 ```
 
 ### Heatmap with posterior probabilities of differential enrichment
 
-epigraHMM uses a mixture model embedded into one of its hidden Markov model states to encode all possible combinatorial patterns of enrichment across multiple conditions. It is often of interest to determine not only whether a peak is differential or not, but also to classify its association with enrichment to a particular treatment condition or any combination of them. For example, in the example above, one may want to determine whether a differential peak is actually representing an enrichment of read counts in the SHR condition alone. In a more general example with three conditions, one may want to determine which combinatorial pattern out of all six possible patterns of differential enrichment ($2^3 -2$) is the one associated with a differential peak.
+epigraHMM uses a mixture model embedded into one of its hidden Markov model states to encode all possible combinatorial patterns of enrichment across multiple conditions. It is often of interest to determine not only whether a peak is differential or not, but also to classify its association with enrichment to a particular treatment condition or any combination of them. For example, in the example above, one may want to determine whether a differential peak is actually representing an enrichment of read counts in the CTCF alone. In a more general example with three conditions, one may want to determine which combinatorial pattern out of all six possible patterns of differential enrichment ($2^3 -2$) is the one associated with a differential peak.
 
-epigraHMM provides the function `plotPatterns`, which plots a heatmap with the posterior probabilities associated with each mixture model component from the HMM-embedded epigraHMM's mixture model. In the example below, we are interested in determining the direction of enrichment between the BN and SHR conditions of the third differential peak (from left to right) illustrated in the figure of the previous section.
+epigraHMM provides the function `plotPatterns`, which plots a heatmap with the posterior probabilities associated with each mixture model component from the HMM-embedded epigraHMM's mixture model. In the example below, we are interested in determining the direction of enrichment between CTCF and KAT3B of the last differential peak (from left to right) illustrated in the figure of the previous section.
 
 ```{r viz_heatmap1}
 # Selecting target differential peak
-pattern_peak <- peaks_differential[peaks_differential$name == 'peak4']
+pattern_peak <- peaks_differential[overlapsAny(peaks_differential,gr_differential)]
 
-pattern_peak
-
-plotPatterns(object = object_differential,
-             ranges = pattern_peak,
-             peaks = peaks_differential)
-```
-In the heatmap plot above, the row-wise sum of posterior probabilities (cells of the heatmap) is always equal to 1. For this particular example, genomic windows from the third differential peak (from left to right) of the output from `plotCounts` are all associated with differential enrichment of read counts in condition SHR alone. In a more general scenario, with three or more conditions ($G>2$), for example, the heatmap would exhibit up to $2^3 -2$ differential combinatorial patterns.
-
-Alternatively, one could also be interested in the second differential peak from the figure of the previous section (from left to right). In this case, the differential peak is formed by genomic windows mostly associated with read count enrichment in condition BN only.
-
-```{r viz_heatmap2}
-# Selecting target differential peak
-pattern_peak <- peaks_differential[peaks_differential$name == 'peak3']
-
-pattern_peak
+pattern_peak[5]
 
 plotPatterns(object = object_differential,
-             ranges = pattern_peak,
+             ranges = pattern_peak[5],
              peaks = peaks_differential)
 ```
+In the heatmap plot above, the row-wise sum of posterior probabilities (cells of the heatmap) is always equal to 1. For this particular example, genomic windows from the last differential peak (from left to right) of the output from `plotCounts` are all associated with differential enrichment of read counts in CTCF. In a more general scenario, with three or more conditions ($G>2$), for example, the heatmap would exhibit up to $2^3 -2$ differential combinatorial patterns.
 
 ## Miscellaneous
 
@@ -416,7 +411,7 @@ The combinatorial patterns associated with each of the mixture components can be
 info(object_differential)
 ```
 
-Because we are assessing the enrichment of reads between only two conditions in this particular example, the only possible differential combinatorial patterns are either enrichment in BN condition only (mixture component 1) or enrichment in SHR condition only (mixture component 2).
+Because we are assessing the enrichment of reads between only two conditions in this particular example, the only possible differential combinatorial patterns are either enrichment in CTCF condition only (mixture component 1) or enrichment in SUZ12 condition only (mixture component 2).
 
 To extract the differential combinatorial patterns (or posterior probabilities) associated with differential regions, one can use the function `callPatterns` as below.
 

@@ -89,3 +89,7 @@ from a sequence of states of a Markov chain
 # epigraHMM 1.9.1/1.8.2
 
 * Fix normalization of log-probabilities in cpp code to avoid underflow
+
+# epigraHMM 1.19.1
+
+* epigraHMM examples and the vignette no longer use the chromstaRData package due to its deprecation

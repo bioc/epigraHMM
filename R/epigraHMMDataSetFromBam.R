@@ -16,14 +16,14 @@
 #'
 #' The index ".bai" files must be stored in the same directory of their respective BAM files.
 #' The index files must be named after their respective BAM files with the additional ".bai" suffix.
-#' 
+#'
 #' `epigraHMMDataSetFromBam` will store experimental data (e.g. ChIP-seq counts) from bamFiles (or bamFiles[['counts']], if a list is provided).
 #' Additional data (e.g. input control counts) will be stored similarly with their respective list names.
-#' 
+#'
 #' By default, the function computes read counts using csaw's estimated fragment length via cross correlation analysis.
 #' For experimental counts (e.g. ChIP-seq), sequencing reads are shifted downstream half of the estimated fragment length.
 #' For additional counts (e.g. input control), sequencing reads are not shifted prior to counting.
-#' 
+#'
 #' Additional columns included in the colData input will be passed to the resulting epigraHMMDataSet assay and can be acessed via \code{colData()} function.
 #'
 #' The \code{genome} argument will call Seqinfo::Seqinfo() to fetch the chromosome lengths of the specified genome.
@@ -61,17 +61,17 @@
 #' @importFrom csaw maximizeCcf correlateReads readParam
 #' @importFrom data.table as.data.table
 #' @importFrom S4Vectors decode
-#' 
+#'
 #' @examples
-#' bamFiles <- system.file("extdata","euratrans",
-#'                         "lv-H3K27me3-SHR-male-bio2-tech1.bam",
-#'                         package="chromstaRData")
-#'                         
-#' colData <- data.frame(condition = 'SHR', replicate = 1)
-#' 
+#' bamFiles <- system.file("extdata",
+#'                         "wgEncodeBroadHistoneH1hescCtcfStdAlnRep1.chr21.bam",
+#'                         package="genomationData")
+#'
+#' colData <- data.frame(condition = 'CTCF', replicate = 1)
+#'
 #' object <- epigraHMMDataSetFromBam(bamFiles = bamFiles,
 #'                                   colData = colData,
-#'                                   genome = 'rn4',
+#'                                   genome = 'hg19',
 #'                                   windowSize = 25000,
 #'                                   gapTrack = TRUE,
 #'                                   blackList = TRUE)
@@ -79,40 +79,40 @@
 #' @export
 epigraHMMDataSetFromBam <- function(bamFiles,colData,genome,windowSize,
                                     gapTrack = TRUE, blackList = TRUE){
-    
+
     condition = replicate = chrom = NULL
-    
+
     bamFiles <- checkInputBam(bamFiles,colData,genome,windowSize,gapTrack,blackList)
-    
+
     # Setting up reference genome
     genomeList <- getGenome(genome,windowSize,bamFiles)
     gr.genome <- genomeList[['genome']]
-    
+
     # Setting up gap track
     gr.gaps <- getGap(gapTrack,genome,genomeList[['seqinfo']])
-    
+
     # Setting up blacklist track
     gr.blackList <- getList(blackList,genome)
-    
+
     # Cleaning up the genome
     gr.genome <- gr.genome[!overlapsAny(gr.genome,union(gr.gaps,gr.blackList))]
-    
+
     # Estimating the fragment length
     colData$fragLength <- getFragLen(bamFiles,gr.gaps,gr.blackList)
-    
+
     # Computing read counts and adding to the output
     ctMat <- do.call(cbind,lapply(seq_len(nrow(colData)),FUN = function(x){
         return(bamCount(bampath = bamFiles[['counts']][x],gr = gr.genome,verbose = FALSE,shift = colData[['fragLength']][x]/2))
     }))
-    
+
     ctMat <- matrix(ctMat,byrow = FALSE,nrow = length(gr.genome),ncol = nrow(colData),
                     dimnames = list(NULL,paste(colData$condition,colData$replicate,sep='.')))
-    
+
     epigraHMMDataSet <- SummarizedExperiment(assays = list(counts = ctMat),rowRanges = gr.genome,colData = colData)
-    
+
     # Adding offsets
     epigraHMMDataSet <- addOffsets(epigraHMMDataSet,Matrix(0,nrow = nrow(epigraHMMDataSet),ncol = ncol(epigraHMMDataSet),sparse = TRUE))
-    
+
     # If there are controls, repeat
     if(!length(names(bamFiles)[-which(names(bamFiles)=='counts')]) == 0){
         for(idx in names(bamFiles)[-which(names(bamFiles)=='counts')]){
@@ -123,7 +123,7 @@ epigraHMMDataSetFromBam <- function(bamFiles,colData,genome,windowSize,
             SummarizedExperiment::assay(epigraHMMDataSet,idx) <- tmp
         }
     }
-    
+
     # Returning sorted the object
     return(sortObject(epigraHMMDataSet))
 }

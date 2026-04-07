@@ -38,7 +38,7 @@ Imports:
     pheatmap,
     grDevices
 LinkingTo: Rcpp, RcppArmadillo, Rhdf5lib
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 Encoding: UTF-8
 SystemRequirements: GNU make
 Suggests:
@@ -47,8 +47,8 @@ Suggests:
     knitr,
     rmarkdown,
     BiocStyle,
-    BSgenome.Rnorvegicus.UCSC.rn4,
+    BSgenome.Hsapiens.UCSC.hg19,
     gcapc,
-    chromstaRData
+    genomationData
 VignetteBuilder: knitr
 LazyData: true
