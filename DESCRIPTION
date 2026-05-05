@@ -22,7 +22,6 @@ Imports:
     rtracklayer,
     IRanges,
     Rsamtools,
-    bamsignals,
     csaw,
     S4Vectors,
     limma,
@@ -38,7 +37,6 @@ Imports:
     pheatmap,
     grDevices
 LinkingTo: Rcpp, RcppArmadillo, Rhdf5lib
-RoxygenNote: 7.3.3
 Encoding: UTF-8
 SystemRequirements: GNU make
 Suggests:
@@ -52,3 +50,4 @@ Suggests:
     genomationData
 VignetteBuilder: knitr
 LazyData: true
+Config/roxygen2/version: 8.0.0

@@ -10,7 +10,8 @@ epigraHMMDataSetFromBam(
   genome,
   windowSize,
   gapTrack = TRUE,
-  blackList = TRUE
+  blackList = TRUE,
+  param = readParam()
 )
 }
 \arguments{
@@ -27,6 +28,8 @@ vectors must be named, have the same dimension, and, at least, a vector with nam
 \item{gapTrack}{either a logical (\code{TRUE}, the default, or \code{FALSE}) or a GRanges object with gap regions of the genome to be excluded. If \code{TRUE}, the function will discard genomic coordinates overlapping regions present in the UCSC gap table of the respective reference genome (if available). See Details section below.}
 
 \item{blackList}{either a logical (\code{TRUE}, the default, or \code{FALSE}) or a GRanges object with blacklisted regions of the genome to be excluded. If \code{TRUE}, the function will discard ENCODE blacklisted regions from selected reference genomes (if available). See Details section below.}
+
+\item{param}{an object from the \code{\link[csaw]{readParam}} class with specifications for the read counting step.}
 }
 \value{
 An epigraHMMDataSet object with sorted colData regarding conditions and replicates.
@@ -45,8 +48,8 @@ The index files must be named after their respective BAM files with the addition
 Additional data (e.g. input control counts) will be stored similarly with their respective list names.
 
 By default, the function computes read counts using csaw's estimated fragment length via cross correlation analysis.
-For experimental counts (e.g. ChIP-seq), sequencing reads are shifted downstream half of the estimated fragment length.
-For additional counts (e.g. input control), sequencing reads are not shifted prior to counting.
+For experimental counts (e.g. ChIP-seq), sequencing reads are extended (if single-end reads) and scaled to the geometric mean of the average lengths of the sequenced fragments in each library.
+For additional counts (e.g. input control), sequencing reads are extended to the geometric mean of the of the average lengths of the experimental libraries.
 
 Additional columns included in the colData input will be passed to the resulting epigraHMMDataSet assay and can be acessed via \code{colData()} function.
 
