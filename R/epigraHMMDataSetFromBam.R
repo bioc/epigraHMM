@@ -11,6 +11,7 @@
 #' @param windowSize an integer specifying the size of genomic windows where read counts will be computed.
 #' @param gapTrack either a logical (\code{TRUE}, the default, or \code{FALSE}) or a GRanges object with gap regions of the genome to be excluded. If \code{TRUE}, the function will discard genomic coordinates overlapping regions present in the UCSC gap table of the respective reference genome (if available). See Details section below.
 #' @param blackList either a logical (\code{TRUE}, the default, or \code{FALSE}) or a GRanges object with blacklisted regions of the genome to be excluded. If \code{TRUE}, the function will discard ENCODE blacklisted regions from selected reference genomes (if available). See Details section below.
+#' @param param an object from the \code{\link[csaw]{readParam}} class with specifications for the read counting step.
 #'
 #' @details
 #'
@@ -21,8 +22,8 @@
 #' Additional data (e.g. input control counts) will be stored similarly with their respective list names.
 #'
 #' By default, the function computes read counts using csaw's estimated fragment length via cross correlation analysis.
-#' For experimental counts (e.g. ChIP-seq), sequencing reads are shifted downstream half of the estimated fragment length.
-#' For additional counts (e.g. input control), sequencing reads are not shifted prior to counting.
+#' For experimental counts (e.g. ChIP-seq), sequencing reads are extended (if single-end reads) and scaled to the geometric mean of the average lengths of the sequenced fragments in each library.
+#' For additional counts (e.g. input control), sequencing reads are extended to the geometric mean of the of the average lengths of the experimental libraries.
 #'
 #' Additional columns included in the colData input will be passed to the resulting epigraHMMDataSet assay and can be acessed via \code{colData()} function.
 #'
@@ -57,8 +58,7 @@
 #' @importFrom rtracklayer browserSession getTable ucscTableQuery import BEDFile
 #' @importFrom IRanges overlapsAny union
 #' @importFrom Rsamtools scanBam ScanBamParam
-#' @importFrom bamsignals bamCount
-#' @importFrom csaw maximizeCcf correlateReads readParam
+#' @importFrom csaw maximizeCcf correlateReads readParam regionCounts
 #' @importFrom data.table as.data.table
 #' @importFrom S4Vectors decode
 #'
@@ -78,7 +78,8 @@
 #'
 #' @export
 epigraHMMDataSetFromBam <- function(bamFiles,colData,genome,windowSize,
-                                    gapTrack = TRUE, blackList = TRUE){
+                                    gapTrack = TRUE, blackList = TRUE,
+                                    param = readParam()){
 
     condition = replicate = chrom = NULL
 
@@ -99,14 +100,15 @@ epigraHMMDataSetFromBam <- function(bamFiles,colData,genome,windowSize,
 
     # Estimating the fragment length
     colData$fragLength <- getFragLen(bamFiles,gr.gaps,gr.blackList)
+    meanLength <- exp(mean(log(colData$fragLength)))
 
     # Computing read counts and adding to the output
-    ctMat <- do.call(cbind,lapply(seq_len(nrow(colData)),FUN = function(x){
-        return(bamCount(bampath = bamFiles[['counts']][x],gr = gr.genome,verbose = FALSE,shift = colData[['fragLength']][x]/2))
-    }))
-
-    ctMat <- matrix(ctMat,byrow = FALSE,nrow = length(gr.genome),ncol = nrow(colData),
-                    dimnames = list(NULL,paste(colData$condition,colData$replicate,sep='.')))
+    ctMat <- regionCounts(bam.files = bamFiles[['counts']],
+                          regions = gr.genome,
+                          ext = list(colData$fragLength,meanLength),
+                          param = param)
+    ctMat <- assay(ctMat,'counts')
+    dimnames(ctMat) <- list(NULL,paste(colData$condition,colData$replicate,sep='.'))
 
     epigraHMMDataSet <- SummarizedExperiment(assays = list(counts = ctMat),rowRanges = gr.genome,colData = colData)
 
@@ -116,11 +118,13 @@ epigraHMMDataSetFromBam <- function(bamFiles,colData,genome,windowSize,
     # If there are controls, repeat
     if(!length(names(bamFiles)[-which(names(bamFiles)=='counts')]) == 0){
         for(idx in names(bamFiles)[-which(names(bamFiles)=='counts')]){
-            tmp <- do.call(cbind,lapply(seq_len(nrow(colData)),FUN = function(x){
-                bamCount(bampath = bamFiles[[idx]][x],gr = gr.genome,verbose = FALSE)
-            }))
-            dimnames(tmp) <- dimnames(SummarizedExperiment::assay(epigraHMMDataSet,'counts'))
-            SummarizedExperiment::assay(epigraHMMDataSet,idx) <- tmp
+          tmp <- regionCounts(bam.files = bamFiles[[idx]],
+                                regions = gr.genome,
+                                ext = meanLength,
+                                param = param)
+          tmp <- assay(tmp,'counts')
+          dimnames(tmp) <- dimnames(SummarizedExperiment::assay(epigraHMMDataSet,'counts'))
+          SummarizedExperiment::assay(epigraHMMDataSet,idx) <- tmp
         }
     }
 
