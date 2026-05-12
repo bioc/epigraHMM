@@ -251,7 +251,7 @@ The `control` argument should be a list of parameter specifications generated fr
 
 ### Multi-sample single-condition analysis
 
-If one is interested in detecting consensus peaks across multiple samples (or simply detecting peaks from a single-sample) of the same condition, epigraHMM can be used with the option `type = 'consensus'` as below. To speed up the computing time, I utilize a window size of 250 base pairs. In reality, one would have biological replicates in a ChIP-seq experiment.
+If one is interested in detecting consensus peaks across multiple samples (or simply detecting peaks from a single-sample) of the same condition, epigraHMM can be used with the option `type = 'consensus'` as below. To speed up the computing time, I utilize a window size of 500 base pairs. In reality, one would have biological replicates in a ChIP-seq experiment.
 
 ```{r data_peak_consensus,message = FALSE}
 # Creating input for epigraHMM
@@ -265,7 +265,7 @@ colData <- data.frame(condition = "CTCF",
 object_consensus <- epigraHMMDataSetFromBam(bamFiles = bamFiles,
                                             colData = colData,
                                             genome = 'hg19',
-                                            windowSize = 250,
+                                            windowSize = 500,
                                             gapTrack = TRUE,
                                             blackList = TRUE)
 
@@ -287,7 +287,7 @@ object_consensus <- epigraHMM(object = object_consensus,
 
 ### Multi-sample, multiple-condition analysis
 
-If one is interested in detecting differential peaks across multiple samples collected under different conditions, epigraHMM can be used with the option `type = 'differential'` as below. Note that it is not mandatory for experimental conditions to have more than one technical or biological replicates. In principle, epigraHMM is able to call differential peaks under single-sample multi-condition designs. However, users are strongly encouraged to utilized as many technical/biological replicates per condition as possible in their analyses. epigraHMM provides better performance regarding sensitivity and false discovery rate (FDR) control when more replicates are utilized (see Web Figures 13-15 in [@baldoni2019efficient]). To speed up the computing time, I utilize a window size of 250 base pairs.
+If one is interested in detecting differential peaks across multiple samples collected under different conditions, epigraHMM can be used with the option `type = 'differential'` as below. Note that it is not mandatory for experimental conditions to have more than one technical or biological replicates. In principle, epigraHMM is able to call differential peaks under single-sample multi-condition designs. However, users are strongly encouraged to utilized as many technical/biological replicates per condition as possible in their analyses. epigraHMM provides better performance regarding sensitivity and false discovery rate (FDR) control when more replicates are utilized (see Web Figures 13-15 in [@baldoni2019efficient]). To speed up the computing time, I utilize a window size of 500 base pairs.
 
 ```{r data_peak_differential,message = FALSE}
 # Creating input for epigraHMM
@@ -302,7 +302,7 @@ colData <- data.frame(condition = c("CTCF","SUZ12"),
 object_differential <- epigraHMMDataSetFromBam(bamFiles = bamFiles,
                                                colData = colData,
                                                genome = 'hg19',
-                                               windowSize = 250,
+                                               windowSize = 500,
                                                gapTrack = TRUE,
                                                blackList = TRUE)
 
@@ -371,7 +371,7 @@ plotCounts(object = object_consensus,
            peaks = peaks_consensus,
            annotation = annotation)
 ```
-Below, we have an example of differential peak calls between CTCF and KAT3B.
+Below, we have an example of differential peak calls between CTCF and SUZ12.
 
 ```{r viz_differential}
 gr_differential <- GRanges('chr21',IRanges(41198328,41352762))
@@ -386,16 +386,16 @@ plotCounts(object = object_differential,
 
 epigraHMM uses a mixture model embedded into one of its hidden Markov model states to encode all possible combinatorial patterns of enrichment across multiple conditions. It is often of interest to determine not only whether a peak is differential or not, but also to classify its association with enrichment to a particular treatment condition or any combination of them. For example, in the example above, one may want to determine whether a differential peak is actually representing an enrichment of read counts in the CTCF alone. In a more general example with three conditions, one may want to determine which combinatorial pattern out of all six possible patterns of differential enrichment ($2^3 -2$) is the one associated with a differential peak.
 
-epigraHMM provides the function `plotPatterns`, which plots a heatmap with the posterior probabilities associated with each mixture model component from the HMM-embedded epigraHMM's mixture model. In the example below, we are interested in determining the direction of enrichment between CTCF and KAT3B of the last differential peak (from left to right) illustrated in the figure of the previous section.
+epigraHMM provides the function `plotPatterns`, which plots a heatmap with the posterior probabilities associated with each mixture model component from the HMM-embedded epigraHMM's mixture model. In the example below, we are interested in determining the direction of enrichment between CTCF and SUZ12 of the last differential peak (from left to right) illustrated in the figure of the previous section.
 
 ```{r viz_heatmap1}
 # Selecting target differential peak
 pattern_peak <- peaks_differential[overlapsAny(peaks_differential,gr_differential)]
 
-pattern_peak[5]
+pattern_peak[4]
 
 plotPatterns(object = object_differential,
-             ranges = pattern_peak[5],
+             ranges = pattern_peak[4],
              peaks = peaks_differential)
 ```
 In the heatmap plot above, the row-wise sum of posterior probabilities (cells of the heatmap) is always equal to 1. For this particular example, genomic windows from the last differential peak (from left to right) of the output from `plotCounts` are all associated with differential enrichment of read counts in CTCF. In a more general scenario, with three or more conditions ($G>2$), for example, the heatmap would exhibit up to $2^3 -2$ differential combinatorial patterns.
